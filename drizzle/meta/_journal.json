@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1792705075147,
+      "tag": "0000_create_images",
+      "breakpoints": true
+    }
+  ]
+}

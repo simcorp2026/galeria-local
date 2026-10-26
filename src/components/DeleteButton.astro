@@ -1,0 +1,46 @@
+---
+// Borra la imagen tras confirmar y vuelve a la galería
+interface Props {
+  id: string;
+  name: string;
+}
+
+const { id, name } = Astro.props;
+---
+
+<div data-delete-image data-id={id} data-name={name}>
+  <button
+    type="button"
+    class="rounded-full border border-danger/40 bg-surface px-4 py-2 text-sm font-medium text-danger hover:bg-danger-soft disabled:cursor-not-allowed disabled:opacity-50"
+  >
+    Eliminar
+  </button>
+  <p data-status role="status" aria-live="polite" class="mt-2 min-h-5 text-sm text-danger"></p>
+</div>
+
+<script>
+  for (const root of document.querySelectorAll<HTMLElement>('[data-delete-image]')) {
+    const button = root.querySelector('button')!;
+    const status = root.querySelector<HTMLElement>('[data-status]')!;
+    const { id, name } = root.dataset;
+
+    button.addEventListener('click', async () => {
+      if (!confirm(`¿Eliminar «${name}»? Esta acción no se puede deshacer.`)) return;
+
+      button.disabled = true;
+      status.textContent = '';
+      try {
+        const response = await fetch(`/api/images/${id}`, { method: 'DELETE' });
+        // 404: ya estaba borrada, el resultado es el mismo
+        if (!response.ok && response.status !== 404) {
+          throw new Error(`Error del servidor (${response.status})`);
+        }
+        location.assign('/');
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : '';
+        status.textContent = `No se pudo eliminar la imagen. ${detail}`;
+        button.disabled = false;
+      }
+    });
+  }
+</script>

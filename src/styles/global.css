@@ -1,0 +1,66 @@
+@import 'tailwindcss';
+
+/* Tema: el script de Base.astro pone data-theme="light" | "dark" en <html> */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+/* Colores semánticos: los componentes usan bg-canvas, text-ink, bg-accent, etc. */
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-subtle: var(--subtle);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-on-accent: var(--on-accent);
+  --color-glow: var(--glow);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-success: var(--success);
+}
+
+:root {
+  color-scheme: light;
+  --canvas: #f5f5fc;
+  --surface: #ffffff;
+  --subtle: #ececf8;
+  --line: #dcdcef;
+  --ink: #1b1b3a;
+  --muted: #5e6088;
+  --accent: #6d28d9;
+  --accent-hover: #5b21b6;
+  --on-accent: #ffffff;
+  --glow: #4f46e5;
+  --danger: #c62828;
+  --danger-soft: #fdecec;
+  --success: #15803d;
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+  --canvas: #0b0d1c;
+  --surface: #12152b;
+  --subtle: #1b1f3d;
+  --line: #2a2e55;
+  --ink: #e7e7f6;
+  --muted: #9b9dc6;
+  --accent: #8b5cf6;
+  --accent-hover: #a78bfa;
+  --on-accent: #0b0d1c;
+  --glow: #6366f1;
+  --danger: #f87171;
+  --danger-soft: #2a1420;
+  --success: #4ade80;
+}
+
+@layer base {
+  ::selection {
+    background: color-mix(in srgb, var(--accent) 30%, transparent);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+}

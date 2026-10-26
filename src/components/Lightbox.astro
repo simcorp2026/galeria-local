@@ -1,0 +1,111 @@
+---
+// Vista ampliada. Se abre con: document.dispatchEvent(new CustomEvent('lightbox:open',
+// { detail: { images, index } })). Teclado: ← / → navegan, Esc cierra (nativo de <dialog>)
+---
+
+<dialog
+  id="lightbox"
+  aria-label="Vista ampliada"
+  class="fixed inset-0 m-0 h-dvh max-h-none w-dvw max-w-none bg-transparent p-0 text-white backdrop:bg-[#070814]/95 backdrop:backdrop-blur-sm"
+>
+  <figure class="flex h-full w-full flex-col items-center justify-center gap-3 px-4 py-14 sm:px-16">
+    <img data-image alt="" class="max-h-full max-w-full min-h-0 object-contain" />
+    <figcaption class="flex max-w-full items-center gap-4 text-sm">
+      <span data-caption class="truncate"></span>
+      <span data-position class="shrink-0 text-neutral-400"></span>
+      <a data-detail class="shrink-0 underline hover:text-neutral-300">
+        Ver detalle
+      </a>
+    </figcaption>
+  </figure>
+
+  <button
+    data-close
+    type="button"
+    aria-label="Cerrar (Esc)"
+    class="absolute top-3 right-3 rounded-full p-2 text-2xl leading-none hover:bg-white/10"
+  >
+    ✕
+  </button>
+  <button
+    data-prev
+    type="button"
+    aria-label="Anterior (←)"
+    class="absolute top-1/2 left-2 -translate-y-1/2 rounded-full p-3 text-3xl leading-none hover:bg-white/10 disabled:invisible"
+  >
+    ‹
+  </button>
+  <button
+    data-next
+    type="button"
+    aria-label="Siguiente (→)"
+    class="absolute top-1/2 right-2 -translate-y-1/2 rounded-full p-3 text-3xl leading-none hover:bg-white/10 disabled:invisible"
+  >
+    ›
+  </button>
+</dialog>
+
+<script>
+  import type { ImageResponse } from '../lib/storage';
+
+  interface OpenDetail {
+    images: ImageResponse[];
+    index: number;
+  }
+
+  const dialog = document.querySelector<HTMLDialogElement>('#lightbox');
+
+  if (dialog) {
+    const image = dialog.querySelector<HTMLImageElement>('[data-image]')!;
+    const caption = dialog.querySelector<HTMLElement>('[data-caption]')!;
+    const position = dialog.querySelector<HTMLElement>('[data-position]')!;
+    const detail = dialog.querySelector<HTMLAnchorElement>('[data-detail]')!;
+    const prev = dialog.querySelector<HTMLButtonElement>('[data-prev]')!;
+    const next = dialog.querySelector<HTMLButtonElement>('[data-next]')!;
+
+    let images: ImageResponse[] = [];
+    let index = 0;
+
+    const show = (newIndex: number) => {
+      if (newIndex < 0 || newIndex >= images.length) return;
+      index = newIndex;
+      const current = images[index];
+      image.src = current.originalUrl;
+      image.alt = current.originalName;
+      image.width = current.width;
+      image.height = current.height;
+      caption.textContent = current.originalName;
+      position.textContent = `${index + 1} / ${images.length}`;
+      detail.href = current.detailUrl;
+      prev.disabled = index === 0;
+      next.disabled = index === images.length - 1;
+    };
+
+    document.addEventListener('lightbox:open', (event) => {
+      const data = (event as CustomEvent<OpenDetail>).detail;
+      images = data.images;
+      show(data.index);
+      if (!dialog.open) dialog.showModal();
+    });
+
+    dialog.addEventListener('keydown', (event) => {
+      if (event.key === 'ArrowLeft') show(index - 1);
+      else if (event.key === 'ArrowRight') show(index + 1);
+      else return;
+      event.preventDefault();
+    });
+
+    prev.addEventListener('click', () => show(index - 1));
+    next.addEventListener('click', () => show(index + 1));
+    dialog.querySelector('[data-close]')!.addEventListener('click', () => dialog.close());
+
+    // Clic fuera de la imagen y de los controles cierra
+    dialog.addEventListener('click', (event) => {
+      const target = event.target as HTMLElement;
+      if (target === dialog || target.tagName === 'FIGURE') dialog.close();
+    });
+
+    // No seguir descargando el original al cerrar
+    dialog.addEventListener('close', () => image.removeAttribute('src'));
+  }
+</script>

@@ -1,0 +1,22 @@
+---
+// Plantilla de tarjeta; Gallery.astro la clona y la rellena con los datos de la API
+---
+
+<template id="image-card-template">
+  <li>
+    <a
+      data-link
+      class="block overflow-hidden rounded-xl bg-subtle ring-1 ring-line transition-shadow hover:ring-accent/60 hover:shadow-lg hover:shadow-accent/10 focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
+    >
+      <img
+        data-thumb
+        loading="lazy"
+        decoding="async"
+        width="400"
+        height="400"
+        class="aspect-square w-full object-cover transition-transform duration-200 hover:scale-105"
+      />
+    </a>
+    <p data-name class="mt-1 truncate text-sm text-muted"></p>
+  </li>
+</template>

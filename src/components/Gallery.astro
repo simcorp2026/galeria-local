@@ -1,0 +1,151 @@
+---
+import ImageCard from './ImageCard.astro';
+import Lightbox from './Lightbox.astro';
+---
+
+<section id="gallery" aria-labelledby="gallery-title" aria-busy="true">
+  <h2 id="gallery-title" class="text-xl font-semibold">
+    Imágenes
+  </h2>
+
+  <p data-loading class="mt-4 text-muted">
+    Cargando imágenes…
+  </p>
+
+  <div
+    data-error
+    hidden
+    role="alert"
+    class="mt-4 rounded-2xl border border-danger/40 bg-danger-soft p-4 text-sm text-danger"
+  >
+    <p data-error-message></p>
+    <button data-retry type="button" class="mt-2 font-medium underline">
+      Reintentar
+    </button>
+  </div>
+
+  <p
+    data-empty
+    hidden
+    class="mt-4 rounded-2xl border border-dashed border-line px-6 py-12 text-center text-muted"
+  >
+    Aún no hay imágenes. Sube la primera.
+  </p>
+
+  <ul data-grid class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4"></ul>
+
+  <button
+    data-more
+    hidden
+    type="button"
+    class="mx-auto mt-8 block rounded-full border border-line bg-surface px-4 py-2 text-sm font-medium hover:bg-subtle disabled:opacity-50"
+  >
+    Cargar más
+  </button>
+</section>
+
+<ImageCard />
+<Lightbox />
+
+<script>
+  import type { ImageResponse } from '../lib/storage';
+
+  interface Page {
+    items: ImageResponse[];
+    nextCursor: string | null;
+  }
+
+  const PAGE_SIZE = 20;
+  const gallery = document.querySelector<HTMLElement>('#gallery');
+  const template = document.querySelector<HTMLTemplateElement>('#image-card-template');
+
+  if (gallery && template) {
+    const loadingEl = gallery.querySelector<HTMLElement>('[data-loading]')!;
+    const errorEl = gallery.querySelector<HTMLElement>('[data-error]')!;
+    const errorMessage = gallery.querySelector<HTMLElement>('[data-error-message]')!;
+    const retry = gallery.querySelector<HTMLButtonElement>('[data-retry]')!;
+    const empty = gallery.querySelector<HTMLElement>('[data-empty]')!;
+    const grid = gallery.querySelector<HTMLUListElement>('[data-grid]')!;
+    const more = gallery.querySelector<HTMLButtonElement>('[data-more]')!;
+
+    // Mismo orden que las tarjetas de la cuadrícula; el lightbox navega sobre esta lista
+    const items: ImageResponse[] = [];
+    let cursor: string | null = null;
+    let loading = false;
+
+    const renderCard = (image: ImageResponse) => {
+      const card = template.content.firstElementChild!.cloneNode(true) as HTMLElement;
+      const link = card.querySelector<HTMLAnchorElement>('[data-link]')!;
+      link.href = image.detailUrl;
+      link.dataset.id = image.id;
+      const thumb = card.querySelector<HTMLImageElement>('[data-thumb]')!;
+      thumb.src = image.thumbUrl;
+      thumb.alt = image.originalName;
+      card.querySelector('[data-name]')!.textContent = image.originalName;
+      return card;
+    };
+
+    const updateEmpty = () => {
+      empty.hidden = grid.childElementCount > 0 || !errorEl.hidden;
+    };
+
+    const load = async () => {
+      if (loading) return;
+      loading = true;
+      gallery.setAttribute('aria-busy', 'true');
+      errorEl.hidden = true;
+      more.disabled = true;
+
+      try {
+        const params = new URLSearchParams({ limit: String(PAGE_SIZE) });
+        if (cursor) params.set('cursor', cursor);
+        const response = await fetch(`/api/images?${params}`);
+        const body = (await response.json().catch(() => null)) as
+          (Page & { error?: string }) | null;
+        if (!response.ok) throw new Error(body?.error ?? `Error del servidor (${response.status})`);
+
+        const page = body as Page;
+        // appendChild/insertBefore: los tipos de Workers redefinen append/prepend de Element
+        for (const image of page.items) grid.appendChild(renderCard(image));
+        items.push(...page.items);
+        cursor = page.nextCursor;
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : '';
+        errorMessage.textContent = `No se pudieron cargar las imágenes. ${detail}`;
+        errorEl.hidden = false;
+      } finally {
+        loading = false;
+        loadingEl.hidden = true;
+        gallery.setAttribute('aria-busy', 'false');
+        more.hidden = !cursor || !errorEl.hidden;
+        more.disabled = false;
+        updateEmpty();
+      }
+    };
+
+    retry.addEventListener('click', load);
+    more.addEventListener('click', load);
+
+    // Clic normal abre el lightbox; Ctrl/Cmd/Shift/clic central siguen el enlace a la vista detalle
+    grid.addEventListener('click', (event) => {
+      const link = (event.target as HTMLElement).closest<HTMLAnchorElement>('[data-link]');
+      if (!link || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey) return;
+      const index = items.findIndex((image) => image.id === link.dataset.id);
+      if (index === -1) return;
+      event.preventDefault();
+      document.dispatchEvent(
+        new CustomEvent('lightbox:open', { detail: { images: items, index } }),
+      );
+    });
+
+    // Las imágenes nuevas van primero; no se repiten al paginar porque son más recientes que el cursor
+    document.addEventListener('image:uploaded', (event) => {
+      const image = (event as CustomEvent<ImageResponse>).detail;
+      items.unshift(image);
+      grid.insertBefore(renderCard(image), grid.firstChild);
+      updateEmpty();
+    });
+
+    load();
+  }
+</script>

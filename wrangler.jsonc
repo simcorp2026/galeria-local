@@ -1,0 +1,29 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "beneficial-binary",
+  "main": "@astrojs/cloudflare/entrypoints/server",
+  "compatibility_date": "2026-10-12",
+  "compatibility_flags": ["global_fetch_strictly_public"],
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+  },
+  // Bucket R2 local (Miniflare, persistido en .wrangler/state) para originales y miniaturas
+  "r2_buckets": [
+    {
+      "binding": "BUCKET",
+      "bucket_name": "beneficial-binary-images",
+    },
+  ],
+  // Base D1 local (Miniflare) para metadatos. Sin "database_id": no hay base remota
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "beneficial-binary-db",
+      "migrations_dir": "drizzle",
+    },
+  ],
+  "observability": {
+    "enabled": true,
+  },
+}

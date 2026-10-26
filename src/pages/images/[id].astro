@@ -1,0 +1,77 @@
+---
+import { env } from 'cloudflare:workers';
+import DeleteButton from '../../components/DeleteButton.astro';
+import Base from '../../layouts/Base.astro';
+import { getDb } from '../../lib/db/client';
+import { findImageById } from '../../lib/db/queries';
+import { fileUrl } from '../../lib/storage';
+
+const image = await findImageById(getDb(env.DB), Astro.params.id);
+if (!image) Astro.response.status = 404;
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
+const dateFormat = new Intl.DateTimeFormat('es', { dateStyle: 'long', timeStyle: 'short' });
+---
+
+{image ? (
+  <Base title={image.originalName}>
+    <a href="/" class="text-sm text-muted hover:underline">
+      ← Volver a la galería
+    </a>
+
+    <div class="mt-4 grid gap-6 lg:grid-cols-[1fr_18rem]">
+      <a
+        href={fileUrl(image.originalKey)}
+        target="_blank"
+        rel="noopener"
+        class="flex items-center justify-center overflow-hidden rounded-lg bg-subtle"
+        title="Abrir el original en otra pestaña"
+      >
+        <img
+          src={fileUrl(image.originalKey)}
+          alt={image.originalName}
+          width={image.width}
+          height={image.height}
+          decoding="async"
+          class="max-h-[75dvh] w-auto object-contain"
+        />
+      </a>
+
+      <aside>
+        <h1 class="text-xl font-semibold break-words">{image.originalName}</h1>
+        <dl class="mt-4 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
+          <dt class="text-muted">Dimensiones</dt>
+          <dd>
+            {image.width} × {image.height} px
+          </dd>
+          <dt class="text-muted">Tamaño</dt>
+          <dd>{formatBytes(image.size)}</dd>
+          <dt class="text-muted">Tipo</dt>
+          <dd>{image.mimeType}</dd>
+          <dt class="text-muted">Subida</dt>
+          <dd>
+            <time datetime={image.createdAt.toISOString()}>
+              {dateFormat.format(image.createdAt)}
+            </time>
+          </dd>
+        </dl>
+        <div class="mt-6">
+          <DeleteButton id={image.id} name={image.originalName} />
+        </div>
+      </aside>
+    </div>
+  </Base>
+) : (
+  <Base title="Imagen no encontrada">
+    <h1 class="text-2xl font-semibold">Imagen no encontrada</h1>
+    <p class="mt-2 text-muted">Puede que se haya eliminado.</p>
+    <a href="/" class="mt-4 inline-block text-sm underline">
+      Volver a la galería
+    </a>
+  </Base>
+)}
